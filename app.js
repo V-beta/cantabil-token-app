@@ -20,7 +20,6 @@ let currentUser = null;
 let fullMenuData = [];
 let selectedDate = "";
 let todayDate = "";
-let isSelectedDateWeekOff = false;
 
 // 🔥 BUTTONS CONNECT
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nextDayBtn').addEventListener('click', () => shiftDate(1));
   document.getElementById('goTodayBtn').addEventListener('click', () => {
     selectedDate = todayDate;
-    renderMenuUI();
+    updateMenuDisplay();
   });
 
   const saved = localStorage.getItem('cafeteriaUser');
@@ -128,9 +127,7 @@ async function saveNewPassword() {
   }
 
   try {
-    await setDoc(doc(db, 'employees', code), {
-      password: newPass
-    }, { merge: true });
+    await setDoc(doc(db, 'employees', code), { password: newPass }, { merge: true });
 
     const empSnap = await getDoc(doc(db, 'employees', code));
     const empData = empSnap.data();
@@ -159,8 +156,11 @@ async function showDashboard() {
   todayDate = getTodayISO();
   selectedDate = todayDate;
 
+  // Menu load karo pehle
   await fetchMenuData(); 
-  await checkTokenStatus();
+  
+  // Fir token aur history check karo
+  await checkTodayToken();
   await loadHistory();
 }
 
@@ -180,9 +180,12 @@ async function fetchMenuData() {
     const res = await fetch(MENU_URL + '?t=' + Date.now());
     const data = await res.json();
     fullMenuData = data.menu;
-    renderMenuUI();
+    
+    // Data aane ke baad UI update karo
+    updateMenuDisplay(); 
   } catch (err) {
-    document.getElementById('menuContent').innerHTML = '<p style="color:red;">Failed to load menu.</p>';
+    document.getElementById('menuContent').innerHTML = '<p style="color:red;">Failed to load menu. Please refresh.</p>';
+    console.error("Menu error:", err);
   }
 }
 
@@ -196,16 +199,16 @@ function shiftDate(days) {
   const day = String(d.getDate()).padStart(2, '0');
   
   selectedDate = `${y}-${m}-${day}`;
-  renderMenuUI();
+  updateMenuDisplay();
 }
 
-// ===== RENDER MENU BASED ON SELECTED DATE =====
-function renderMenuUI() {
+// ===== UPDATE MENU UI (Date ke hisaab se) =====
+function updateMenuDisplay() {
   const menuDiv = document.getElementById('menuContent');
   const dateTitle = document.getElementById('menuDateDisplay');
   const tokenCard = document.getElementById('tokenCard');
 
-  // Format date for display
+  // Date format karo
   const d = new Date(selectedDate);
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -213,36 +216,47 @@ function renderMenuUI() {
   
   dateTitle.textContent = dateStr;
 
-  // Show/Hide "Today" button
+  // Today Button check
   if (selectedDate !== todayDate) {
     document.getElementById('goTodayBtn').style.display = 'block';
   } else {
     document.getElementById('goTodayBtn').style.display = 'none';
   }
 
-  // 🔥 SHOW/HIDE TOKEN CARD
+  // 🔥 TOKEN CARD SHOW/HIDE LOGIC
+  // Agar aaj ki date hai, tabhi token card dikhao
   if (selectedDate === todayDate) {
     tokenCard.style.display = 'block';
   } else {
-    tokenCard.style.display = 'none'; // Sirf aaj ka token
+    tokenCard.style.display = 'none'; // Purani ya aage ki date pe token hide
   }
 
-  // Find menu for selected date
+  // Menu find karo
   const selectedMenu = fullMenuData.find(m => m.date === selectedDate);
 
   if (!selectedMenu) {
     menuDiv.innerHTML = '<p style="text-align:center;color:#888; padding:20px;">No menu available for this date.</p>';
-    isSelectedDateWeekOff = true;
     return;
   }
 
-  if (selectedMenu.lunch && selectedMenu.lunch.length === 1 && selectedMenu.lunch[0].name === 'Week Off') {
+  // Week Off check
+  const isWeekOff = selectedMenu.lunch && selectedMenu.lunch.length === 1 && selectedMenu.lunch[0].name === 'Week Off';
+  
+  if (isWeekOff) {
      menuDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: #C9A961; font-size: 24px; font-weight: bold;">🌴 Week Off</div>';
-     isSelectedDateWeekOff = true;
+     
+     // 🔥 AGAR AAJ WEEK OFF HAI TOH TOKEN GENERATE HATA DO
+     if (selectedDate === todayDate) {
+        document.getElementById('tokenContent').innerHTML = `
+          <div class="token-empty">
+            <p style="color: #C9A961; font-weight: bold; font-size: 16px;">It is a Week Off today! No tokens required.</p>
+          </div>
+        `;
+     }
      return;
   }
 
-  isSelectedDateWeekOff = false;
+  // Normal Menu Show karo
   let html = '<div class="dish-grid">';
   (selectedMenu.lunch || []).forEach(dish => {
     html += `<div class="dish-item">
@@ -254,15 +268,10 @@ function renderMenuUI() {
   menuDiv.innerHTML = html;
 }
 
-// ===== TOKEN =====
-async function checkTokenStatus() {
+// ===== CHECK TODAY'S TOKEN =====
+async function checkTodayToken() {
   const tokenDiv = document.getElementById('tokenContent');
   
-  if (isSelectedDateWeekOff) {
-    tokenDiv.innerHTML = `<div class="token-empty"><p style="color: #C9A961; font-weight: bold;">It's a Week Off today!</p></div>`;
-    return;
-  }
-
   try {
     const q = query(collection(db, 'tokens'), where('employeeCode', '==', currentUser.code), where('date', '==', todayDate));
     const querySnapshot = await getDocs(q);
@@ -271,13 +280,21 @@ async function checkTokenStatus() {
       const tokenData = querySnapshot.docs[0].data();
       showToken(tokenData.token, tokenData.generatedAt);
     } else {
-      tokenDiv.innerHTML = `
-        <div class="token-empty">
-          <p>You haven't generated your token for today yet.</p>
-          <button class="generate-btn" id="generateBtn">🍽️ Generate Today's Token</button>
-        </div>
-      `;
-      document.getElementById('generateBtn').addEventListener('click', generateToken);
+      // Agar Week off nahi hai toh button dikhao
+      const todayMenu = fullMenuData.find(m => m.date === todayDate);
+      const isWeekOff = todayMenu && todayMenu.lunch && todayMenu.lunch.length === 1 && todayMenu.lunch[0].name === 'Week Off';
+      
+      if (isWeekOff) {
+         tokenDiv.innerHTML = `<div class="token-empty"><p style="color: #C9A961; font-weight: bold;">It is a Week Off today! No tokens required.</p></div>`;
+      } else {
+         tokenDiv.innerHTML = `
+          <div class="token-empty">
+            <p>You haven't generated your token for today yet.</p>
+            <button class="generate-btn" id="generateBtn">🍽️ Generate Today's Token</button>
+          </div>
+        `;
+        document.getElementById('generateBtn').addEventListener('click', generateToken);
+      }
     }
   } catch (err) {
     console.error(err);
@@ -300,7 +317,7 @@ async function generateToken() {
     showToken(tokenNumber, new Date().toISOString());
   } catch (err) {
     alert('Error: ' + err.message);
-    checkTokenStatus();
+    checkTodayToken();
   }
 }
 
@@ -344,7 +361,7 @@ async function loadHistory() {
   }
 }
 
-// ===== ADMIN =====
+// ===== ADMIN (No changes needed) =====
 function showAdminLogin(e) {
   e.preventDefault();
   document.getElementById('adminLoginModal').classList.add('show');
@@ -375,7 +392,6 @@ function handleAdminLogout() {
   document.getElementById('loginPage').classList.add('active');
 }
 
-// 🔥 ADMIN TABLE + PASSWORD RESET
 async function loadAdminTable() {
   const tableDiv = document.getElementById('adminTable');
   
