@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// 🔴 TUMHARA FIREBASE CONFIG
+// 🔴 FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyDhr2rMG7ar42gZrc8jb4OllLcWeDK1O-k",
   authDomain: "cantabil-cafeteria.firebaseapp.com",
@@ -34,6 +34,7 @@ window.handleLogin = async function() {
 
   btn.textContent = 'Logging in...';
   btn.disabled = true;
+  errorDiv.classList.remove('show'); // Hide previous errors
 
   try {
     const empRef = doc(db, 'employees', code);
@@ -52,10 +53,18 @@ window.handleLogin = async function() {
     currentUser = { code: code, department: empData.department };
     localStorage.setItem('cafeteriaUser', JSON.stringify(currentUser));
     
-    document.getElementById('loginError').classList.remove('show');
-    showDashboard();
+    document.getElementById('loginPage').classList.remove('active');
+    document.getElementById('dashboardPage').classList.add('active');
+    
+    document.getElementById('dashUserName').textContent = `Hello, ${currentUser.code} 👋`;
+    document.getElementById('dashUserDept').textContent = `Department: ${currentUser.department}`;
+
+    await loadMenu();
+    await checkTokenStatus();
+    await loadHistory();
 
   } catch (err) {
+    console.error(err);
     showError(errorDiv, err.message);
   } finally {
     btn.textContent = 'LOGIN';
@@ -64,20 +73,6 @@ window.handleLogin = async function() {
 };
 
 // ===== DASHBOARD =====
-async function showDashboard() {
-  document.getElementById('loginPage').classList.remove('active');
-  document.getElementById('dashboardPage').classList.add('active');
-  document.getElementById('adminPage').classList.remove('active');
-
-  document.getElementById('dashUserName').textContent = `Hello, ${currentUser.code} 👋`;
-  document.getElementById('dashUserDept').textContent = `Department: ${currentUser.department}`;
-
-  await loadMenu();
-  await checkTokenStatus();
-  await loadHistory();
-}
-
-// ===== LOGOUT =====
 window.handleLogout = function() {
   localStorage.removeItem('cafeteriaUser');
   currentUser = null;
@@ -149,7 +144,7 @@ async function checkTokenStatus() {
       `;
     }
   } catch (err) {
-    console.error(err);
+    console.error("Error checking token:", err);
   }
 }
 
@@ -209,7 +204,7 @@ async function loadHistory() {
 
     let tokens = [];
     snap.forEach(doc => tokens.push(doc.data()));
-    tokens.sort((a, b) => b.date.localeCompare(a.date)); // newest first
+    tokens.sort((a, b) => b.date.localeCompare(a.date)); // Newest first
 
     let html = '<table><thead><tr><th>Date</th><th>Token</th><th>Time</th></tr></thead><tbody>';
     tokens.forEach(t => {
@@ -221,6 +216,7 @@ async function loadHistory() {
     historyDiv.innerHTML = html;
 
   } catch (err) {
+    console.error("Error loading history:", err);
     historyDiv.innerHTML = '<p style="color:red;">Failed to load history.</p>';
   }
 }
@@ -242,19 +238,14 @@ window.handleAdminLogin = function() {
 
   if (pass === ADMIN_PASSWORD) {
     closeAdminLogin();
-    showAdminDashboard();
+    document.getElementById('loginPage').classList.remove('active');
+    document.getElementById('dashboardPage').classList.remove('active');
+    document.getElementById('adminPage').classList.add('active');
+    loadAdminTable();
   } else {
     showError(err, 'Incorrect admin password');
   }
 };
-
-async function showAdminDashboard() {
-  document.getElementById('loginPage').classList.remove('active');
-  document.getElementById('dashboardPage').classList.remove('active');
-  document.getElementById('adminPage').classList.add('active');
-
-  await loadAdminTable();
-}
 
 window.handleAdminLogout = function() {
   document.getElementById('adminPage').classList.remove('active');
@@ -276,8 +267,6 @@ async function loadAdminTable() {
 
     let tokens = [];
     snap.forEach(doc => tokens.push(doc.data()));
-
-    // Sort by employee code
     tokens.sort((a, b) => a.employeeCode.localeCompare(b.employeeCode));
 
     let html = '<table><thead><tr><th>Emp Code</th><th>Department</th><th>Token</th><th>Time</th></tr></thead><tbody>';
@@ -290,6 +279,7 @@ async function loadAdminTable() {
     tableDiv.innerHTML = html;
 
   } catch (err) {
+    console.error(err);
     tableDiv.innerHTML = '<p style="color:red;">Failed to load data.</p>';
   }
 }
@@ -326,11 +316,17 @@ function showError(el, msg) {
   el.classList.add('show');
 }
 
-// ===== AUTO LOGIN (if session exists) =====
+// ===== AUTO LOGIN =====
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('cafeteriaUser');
   if (saved) {
     currentUser = JSON.parse(saved);
-    showDashboard();
+    document.getElementById('loginPage').classList.remove('active');
+    document.getElementById('dashboardPage').classList.add('active');
+    document.getElementById('dashUserName').textContent = `Hello, ${currentUser.code} 👋`;
+    document.getElementById('dashUserDept').textContent = `Department: ${currentUser.department}`;
+    loadMenu();
+    checkTokenStatus();
+    loadHistory();
   }
 });
