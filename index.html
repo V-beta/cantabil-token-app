@@ -46,7 +46,7 @@
     .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #C9A961; padding-bottom: 10px; margin-bottom: 15px; }
     .card-header h2 { font-size: 16px; color: #1B2A4E; }
     
-    /* 🔥 DATE NAVIGATION STYLES */
+    /* === DATE NAVIGATION === */
     .date-nav { display: flex; justify-content: space-between; align-items: center; background: #FAF8F5; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #EDE4D3;}
     .date-nav button { background: #1B2A4E; color: #C9A961; border: none; width: 36px; height: 36px; border-radius: 4px; font-size: 18px; cursor: pointer;}
     .date-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -77,11 +77,17 @@
     .btn-small { padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: none; font-weight: bold;}
     .btn-small.danger { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;}
 
-    /* === MENU DISH GRID === */
-    .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .dish-item { background: #FAF8F5; border: 1px solid #eee; border-radius: 4px; padding: 10px; text-align: center; }
-    .dish-img { width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 5px; }
-    .dish-name { font-size: 13px; font-weight: bold; color: #1B2A4E; }
+    /* === MENU DISH GRID (FIXED IMAGE SIZE) === */
+    .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .dish-item { background: #FAF8F5; border: 1px solid #EDE4D3; border-radius: 6px; overflow: hidden; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+    .dish-img { 
+      width: 100%; 
+      aspect-ratio: 1 / 1; /* 🔥 Ye image ko perfect square banata hai */
+      object-fit: cover; 
+      display: block;
+      background: #eee;
+    }
+    .dish-name { font-size: 13px; font-weight: bold; color: #1B2A4E; padding: 10px 5px; border-top: 2px solid #C9A961; background: white;}
     .loading-spinner { text-align: center; color: #888; font-style: italic; padding: 20px; }
   </style>
 </head>
@@ -142,7 +148,7 @@
           <h2>🍽️ Menu</h2>
         </div>
         
-        <!-- 🔥 NEW DATE NAV BAR -->
+        <!-- DATE NAV BAR -->
         <div class="date-nav">
           <button id="prevDayBtn">‹</button>
           <div class="date-title" id="menuDateDisplay">Loading...</div>
