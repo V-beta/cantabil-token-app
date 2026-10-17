@@ -11,15 +11,9 @@
     .page.active { display: block; }
 
     /* === LOGIN PAGE === */
-    #loginPage {
-      display: none; align-items: center; justify-content: center;
-      min-height: 100vh; background: linear-gradient(135deg, #1B2A4E 0%, #0d182e 100%); padding: 20px;
-    }
+    #loginPage { display: none; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #1B2A4E 0%, #0d182e 100%); padding: 20px; }
     #loginPage.active { display: flex; }
-    .login-container {
-      background: white; width: 100%; max-width: 400px; border-radius: 8px;
-      padding: 40px 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border-top: 5px solid #C9A961;
-    }
+    .login-container { background: white; width: 100%; max-width: 400px; border-radius: 8px; padding: 40px 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border-top: 5px solid #C9A961; }
     .brand { text-align: center; margin-bottom: 30px; }
     .brand-tagline { font-size: 10px; letter-spacing: 2px; color: #8A8A8A; margin-bottom: 5px; }
     .brand-logo { font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #1B2A4E; border: 2px solid #C9A961; padding: 10px; margin-bottom: 10px; }
@@ -33,8 +27,6 @@
     .login-footer a { color: #8A8A8A; font-size: 12px; text-decoration: none; }
     .error-msg { color: #c62828; font-size: 13px; margin-top: 15px; text-align: center; display: none; font-weight: bold;}
     .error-msg.show { display: block; }
-    
-    /* Setup Form */
     #setupForm { display: none; }
     .setup-note { font-size: 13px; color: #1B2A4E; margin-bottom: 15px; text-align: center; background: #fdf8eb; padding: 10px; border-left: 3px solid #C9A961; }
 
@@ -53,7 +45,13 @@
     .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #EDE4D3; }
     .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #C9A961; padding-bottom: 10px; margin-bottom: 15px; }
     .card-header h2 { font-size: 16px; color: #1B2A4E; }
-    .menu-date { font-size: 13px; color: #8A8A8A; font-style: italic; }
+    
+    /* 🔥 DATE NAVIGATION STYLES */
+    .date-nav { display: flex; justify-content: space-between; align-items: center; background: #FAF8F5; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #EDE4D3;}
+    .date-nav button { background: #1B2A4E; color: #C9A961; border: none; width: 36px; height: 36px; border-radius: 4px; font-size: 18px; cursor: pointer;}
+    .date-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .date-title { font-size: 14px; font-weight: bold; color: #1B2A4E; text-align: center; }
+    .today-btn { background: #C9A961 !important; color: #1B2A4E !important; width: auto !important; padding: 0 10px !important; font-size: 12px !important; font-weight: bold; }
 
     /* === TOKEN === */
     .token-card { text-align: center; }
@@ -64,7 +62,7 @@
     .token-number { font-size: 48px; font-weight: bold; letter-spacing: 10px; color: #C9A961; margin: 15px 0; font-family: monospace; }
     .token-note { font-size: 12px; color: #ccc; }
 
-    /* === MODAL === */
+    /* === MODAL & TABLE === */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
     .modal.show { display: flex; }
     .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; position: relative; border-top: 5px solid #C9A961; }
@@ -72,15 +70,12 @@
     .modal-content h2 { margin-bottom: 20px; color: #1B2A4E; }
     .modal-content input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; }
     .modal-content button { width: 100%; padding: 12px; background: #1B2A4E; color: #C9A961; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-
-    /* === TABLE === */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
     th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #FAF8F5; color: #1B2A4E; }
     .download-btn { background: #1B2A4E; color: #C9A961; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; }
     .btn-small { padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: none; font-weight: bold;}
     .btn-small.danger { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;}
-    .btn-small.danger:hover { background: #ffcdd2; }
 
     /* === MENU DISH GRID === */
     .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -101,30 +96,22 @@
         <h1>Cafeteria Portal</h1>
       </div>
 
-      <!-- Normal Login Form -->
       <div id="loginForm" class="login-form">
         <label>Employee Code</label>
         <input type="text" id="loginCode" placeholder="e.g. HR01" autocomplete="off">
-
         <label>Password</label>
         <input type="password" id="loginPassword" placeholder="Enter password">
-
         <button id="loginBtn">LOGIN</button>
-
         <div id="loginError" class="error-msg"></div>
       </div>
 
-      <!-- First Time Password Setup Form -->
       <div id="setupForm" class="login-form">
         <div class="setup-note">Welcome <b id="setupCodeDisplay"></b>! Pehli baar login kar rahe hain. Apna naya password set karein.</div>
         <input type="hidden" id="setupCodeHidden">
-        
         <label>New Password</label>
         <input type="password" id="newPassword" placeholder="Min 6 characters">
-
         <label>Confirm Password</label>
         <input type="password" id="confirmPassword" placeholder="Re-enter password">
-
         <button id="setupPasswordBtn">SET PASSWORD & LOGIN</button>
         <div id="setupError" class="error-msg"></div>
       </div>
@@ -149,17 +136,27 @@
     </div>
 
     <div class="dashboard-content">
+      <!-- TODAY'S MENU WITH NAVIGATION -->
       <div class="card">
         <div class="card-header">
-          <h2>🍽️ Today's Menu</h2>
-          <div id="menuDate" class="menu-date"></div>
+          <h2>🍽️ Menu</h2>
         </div>
+        
+        <!-- 🔥 NEW DATE NAV BAR -->
+        <div class="date-nav">
+          <button id="prevDayBtn">‹</button>
+          <div class="date-title" id="menuDateDisplay">Loading...</div>
+          <button id="nextDayBtn">›</button>
+          <button id="goTodayBtn" class="today-btn" style="display:none;">Today</button>
+        </div>
+
         <div id="menuContent">
           <div class="loading-spinner">Loading menu...</div>
         </div>
       </div>
 
-      <div class="card token-card">
+      <!-- TOKEN (Only for Today) -->
+      <div class="card token-card" id="tokenCard">
         <div class="card-header">
           <h2>🎫 Today's Token</h2>
         </div>
