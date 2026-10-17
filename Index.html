@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cantabil Cafeteria</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== LOGIN PAGE ===== -->
+  <div id="loginPage" class="page active">
+    <div class="login-container">
+      <div class="brand">
+        <div class="brand-tagline">CANTABIL INTERNATIONAL</div>
+        <div class="brand-logo">CANTABIL</div>
+        <h1>Cafeteria Portal</h1>
+      </div>
+
+      <div class="login-form">
+        <label>Employee Code</label>
+        <input type="text" id="loginCode" placeholder="e.g. HR01" autocomplete="off">
+
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password">
+
+        <button id="loginBtn" onclick="handleLogin()">LOGIN</button>
+
+        <div id="loginError" class="error-msg"></div>
+      </div>
+
+      <div class="login-footer">
+        <a href="#" onclick="showAdminLogin(event)">Admin Login</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD PAGE ===== -->
+  <div id="dashboardPage" class="page">
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand-logo-small">CANTABIL</div>
+        <div class="user-info">
+          <div class="user-name" id="dashUserName">Hello, HR01</div>
+          <div class="user-dept" id="dashUserDept">Department: HR</div>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="dashboard-content">
+      <!-- TODAY'S MENU -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🍽️ Today's Menu</h2>
+          <div id="menuDate" class="menu-date"></div>
+        </div>
+        <div id="menuContent">
+          <div class="loading-spinner">Loading menu...</div>
+        </div>
+      </div>
+
+      <!-- TOKEN SECTION -->
+      <div class="card token-card">
+        <div class="card-header">
+          <h2>🎫 Today's Token</h2>
+        </div>
+        <div id="tokenContent">
+          <div class="token-empty">
+            <p>You haven't generated your token for today yet.</p>
+            <button class="generate-btn" onclick="generateToken()">🍽️ Generate Today's Token</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📊 My Token History</h2>
+        </div>
+        <div id="historyContent">
+          <div class="loading-spinner">Loading history...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN LOGIN MODAL ===== -->
+  <div id="adminLoginModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeAdminLogin()">&times;</span>
+      <h2>Admin Login</h2>
+      <input type="password" id="adminPasswordInput" placeholder="Enter admin password">
+      <button onclick="handleAdminLogin()">Login as Admin</button>
+      <div id="adminError" class="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN DASHBOARD PAGE ===== -->
+  <div id="adminPage" class="page">
+    <div class="topbar admin-topbar">
+      <div class="topbar-inner">
+        <div class="brand-logo-small">CANTABIL ADMIN</div>
+        <button class="logout-btn" onclick="handleAdminLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 Today's Generated Tokens</h2>
+          <button class="download-btn" onclick="downloadCSV()">📥 Download CSV</button>
+        </div>
+        <div id="adminTable">
+          <div class="loading-spinner">Loading tokens...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
