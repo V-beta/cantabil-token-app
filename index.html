@@ -27,12 +27,16 @@
     .login-form label { display: block; font-size: 12px; font-weight: bold; color: #1B2A4E; margin-bottom: 5px; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
     .login-form input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; background: #FAF8F5; }
     .login-form input:focus { outline: none; border-color: #C9A961; background: white; }
-    #loginBtn { width: 100%; padding: 14px; margin-top: 25px; background: #1B2A4E; color: #C9A961; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; }
-    #loginBtn:hover { background: #152040; }
+    #loginBtn, #setupPasswordBtn { width: 100%; padding: 14px; margin-top: 25px; background: #1B2A4E; color: #C9A961; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; }
+    #loginBtn:hover, #setupPasswordBtn:hover { background: #152040; }
     .login-footer { text-align: center; margin-top: 20px; }
     .login-footer a { color: #8A8A8A; font-size: 12px; text-decoration: none; }
     .error-msg { color: #c62828; font-size: 13px; margin-top: 15px; text-align: center; display: none; font-weight: bold;}
     .error-msg.show { display: block; }
+    
+    /* Setup Form */
+    #setupForm { display: none; }
+    .setup-note { font-size: 13px; color: #1B2A4E; margin-bottom: 15px; text-align: center; background: #fdf8eb; padding: 10px; border-left: 3px solid #C9A961; }
 
     /* === TOPBAR === */
     .topbar { background: #1B2A4E; color: white; border-bottom: 3px solid #C9A961; }
@@ -74,6 +78,9 @@
     th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #FAF8F5; color: #1B2A4E; }
     .download-btn { background: #1B2A4E; color: #C9A961; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .btn-small { padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: none; font-weight: bold;}
+    .btn-small.danger { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;}
+    .btn-small.danger:hover { background: #ffcdd2; }
 
     /* === MENU DISH GRID === */
     .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -94,7 +101,8 @@
         <h1>Cafeteria Portal</h1>
       </div>
 
-      <div class="login-form">
+      <!-- Normal Login Form -->
+      <div id="loginForm" class="login-form">
         <label>Employee Code</label>
         <input type="text" id="loginCode" placeholder="e.g. HR01" autocomplete="off">
 
@@ -104,6 +112,21 @@
         <button id="loginBtn">LOGIN</button>
 
         <div id="loginError" class="error-msg"></div>
+      </div>
+
+      <!-- First Time Password Setup Form -->
+      <div id="setupForm" class="login-form">
+        <div class="setup-note">Welcome <b id="setupCodeDisplay"></b>! Pehli baar login kar rahe hain. Apna naya password set karein.</div>
+        <input type="hidden" id="setupCodeHidden">
+        
+        <label>New Password</label>
+        <input type="password" id="newPassword" placeholder="Min 6 characters">
+
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword" placeholder="Re-enter password">
+
+        <button id="setupPasswordBtn">SET PASSWORD & LOGIN</button>
+        <div id="setupError" class="error-msg"></div>
       </div>
 
       <div class="login-footer">
@@ -179,11 +202,11 @@
     <div class="dashboard-content">
       <div class="card">
         <div class="card-header">
-          <h2>📋 Today's Generated Tokens</h2>
+          <h2>📋 Employee Tokens & Password Reset</h2>
           <button class="download-btn" id="downloadCsvBtn">📥 Download CSV</button>
         </div>
         <div id="adminTable">
-          <div class="loading-spinner">Loading tokens...</div>
+          <div class="loading-spinner">Loading data...</div>
         </div>
       </div>
     </div>
