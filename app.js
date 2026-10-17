@@ -17,7 +17,10 @@ const ADMIN_PASSWORD = "Cantabil@Admin2026";
 const MENU_URL = 'https://raw.githubusercontent.com/V-beta/cantabil-cafeteria-menu/refs/heads/main/menu.json';
 
 let currentUser = null;
-let isTodayWeekOff = false;
+let fullMenuData = [];
+let selectedDate = "";
+let todayDate = "";
+let isSelectedDateWeekOff = false;
 
 // 🔥 BUTTONS CONNECT
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,6 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const setupPasswordBtn = document.getElementById('setupPasswordBtn');
   if(setupPasswordBtn) setupPasswordBtn.addEventListener('click', saveNewPassword);
+
+  // 🔥 Date Nav Buttons
+  document.getElementById('prevDayBtn').addEventListener('click', () => shiftDate(-1));
+  document.getElementById('nextDayBtn').addEventListener('click', () => shiftDate(1));
+  document.getElementById('goTodayBtn').addEventListener('click', () => {
+    selectedDate = todayDate;
+    renderMenuUI();
+  });
 
   const saved = localStorage.getItem('cafeteriaUser');
   if (saved) {
@@ -76,19 +87,16 @@ async function handleLogin() {
     
     const empData = empSnap.data();
     
-    // 🔥 Agar pehli baar login hai (password null hai) ya default password daala hai
     if (!empData.password || empData.password === code + 'CRIL' || empData.password === password) {
-      
       if (!empData.password || empData.password === code + 'CRIL') {
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('setupForm').style.display = 'block';
         document.getElementById('setupCodeDisplay').textContent = code;
         document.getElementById('setupCodeHidden').value = code;
-        return; // Stop here, wait for new password setup
+        return;
       }
     }
 
-    // Agar normal login hai
     if (empData.password !== password) throw new Error('Incorrect password');
 
     currentUser = { code: code, department: empData.department };
@@ -148,7 +156,10 @@ async function showDashboard() {
   document.getElementById('dashUserName').textContent = `Hello, ${currentUser.code} 👋`;
   document.getElementById('dashUserDept').textContent = `Department: ${currentUser.department}`;
   
-  await loadMenu(); 
+  todayDate = getTodayISO();
+  selectedDate = todayDate;
+
+  await fetchMenuData(); 
   await checkTokenStatus();
   await loadHistory();
 }
@@ -163,64 +174,97 @@ function handleLogout() {
   document.getElementById('loginError').classList.remove('show');
 }
 
-// ===== LOAD MENU =====
-async function loadMenu() {
-  const menuDiv = document.getElementById('menuContent');
-  const dateDiv = document.getElementById('menuDate');
-  
+// ===== FETCH FULL MENU =====
+async function fetchMenuData() {
   try {
     const res = await fetch(MENU_URL + '?t=' + Date.now());
     const data = await res.json();
-    
-    const today = getTodayISO();
-    const todayMenu = data.menu.find(m => m.date === today);
-
-    if (!todayMenu) {
-      menuDiv.innerHTML = '<p style="text-align:center;color:#888;">No menu available for today.</p>';
-      dateDiv.textContent = today;
-      isTodayWeekOff = true;
-      return;
-    }
-
-    dateDiv.textContent = `${todayMenu.day}, ${today}`;
-    
-    if (todayMenu.lunch && todayMenu.lunch.length === 1 && todayMenu.lunch[0].name === 'Week Off') {
-       menuDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: #C9A961; font-size: 24px; font-weight: bold;">🌴 Week Off</div>';
-       isTodayWeekOff = true;
-       return;
-    }
-
-    isTodayWeekOff = false; 
-    let html = '<div class="dish-grid">';
-    (todayMenu.lunch || []).forEach(d => {
-      html += `<div class="dish-item">
-        <img src="${d.image || 'https://via.placeholder.com/150?text=No+Image'}" class="dish-img" onerror="this.src='https://via.placeholder.com/150?text=Food'">
-        <div class="dish-name">${d.name}</div>
-      </div>`;
-    });
-    html += '</div>';
-    menuDiv.innerHTML = html;
+    fullMenuData = data.menu;
+    renderMenuUI();
   } catch (err) {
-    menuDiv.innerHTML = '<p style="color:red;">Failed to load menu.</p>';
+    document.getElementById('menuContent').innerHTML = '<p style="color:red;">Failed to load menu.</p>';
   }
+}
+
+// ===== DATE NAVIGATION =====
+function shiftDate(days) {
+  const d = new Date(selectedDate);
+  d.setDate(d.getDate() + days);
+  
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  selectedDate = `${y}-${m}-${day}`;
+  renderMenuUI();
+}
+
+// ===== RENDER MENU BASED ON SELECTED DATE =====
+function renderMenuUI() {
+  const menuDiv = document.getElementById('menuContent');
+  const dateTitle = document.getElementById('menuDateDisplay');
+  const tokenCard = document.getElementById('tokenCard');
+
+  // Format date for display
+  const d = new Date(selectedDate);
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateStr = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  
+  dateTitle.textContent = dateStr;
+
+  // Show/Hide "Today" button
+  if (selectedDate !== todayDate) {
+    document.getElementById('goTodayBtn').style.display = 'block';
+  } else {
+    document.getElementById('goTodayBtn').style.display = 'none';
+  }
+
+  // 🔥 SHOW/HIDE TOKEN CARD
+  if (selectedDate === todayDate) {
+    tokenCard.style.display = 'block';
+  } else {
+    tokenCard.style.display = 'none'; // Sirf aaj ka token
+  }
+
+  // Find menu for selected date
+  const selectedMenu = fullMenuData.find(m => m.date === selectedDate);
+
+  if (!selectedMenu) {
+    menuDiv.innerHTML = '<p style="text-align:center;color:#888; padding:20px;">No menu available for this date.</p>';
+    isSelectedDateWeekOff = true;
+    return;
+  }
+
+  if (selectedMenu.lunch && selectedMenu.lunch.length === 1 && selectedMenu.lunch[0].name === 'Week Off') {
+     menuDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: #C9A961; font-size: 24px; font-weight: bold;">🌴 Week Off</div>';
+     isSelectedDateWeekOff = true;
+     return;
+  }
+
+  isSelectedDateWeekOff = false;
+  let html = '<div class="dish-grid">';
+  (selectedMenu.lunch || []).forEach(dish => {
+    html += `<div class="dish-item">
+      <img src="${dish.image || 'https://via.placeholder.com/150?text=No+Image'}" class="dish-img" onerror="this.src='https://via.placeholder.com/150?text=Food'">
+      <div class="dish-name">${dish.name}</div>
+    </div>`;
+  });
+  html += '</div>';
+  menuDiv.innerHTML = html;
 }
 
 // ===== TOKEN =====
 async function checkTokenStatus() {
   const tokenDiv = document.getElementById('tokenContent');
-  const today = getTodayISO();
-
-  if (isTodayWeekOff) {
-    tokenDiv.innerHTML = `
-      <div class="token-empty">
-        <p style="color: #C9A961; font-weight: bold; font-size: 16px;">It is a Week Off today! No tokens required.</p>
-      </div>
-    `;
+  
+  if (isSelectedDateWeekOff) {
+    tokenDiv.innerHTML = `<div class="token-empty"><p style="color: #C9A961; font-weight: bold;">It's a Week Off today!</p></div>`;
     return;
   }
 
   try {
-    const q = query(collection(db, 'tokens'), where('employeeCode', '==', currentUser.code), where('date', '==', today));
+    const q = query(collection(db, 'tokens'), where('employeeCode', '==', currentUser.code), where('date', '==', todayDate));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
@@ -241,7 +285,6 @@ async function checkTokenStatus() {
 }
 
 async function generateToken() {
-  const today = getTodayISO();
   const tokenNumber = Math.floor(100000 + Math.random() * 900000).toString();
   const tokenDiv = document.getElementById('tokenContent');
   tokenDiv.innerHTML = '<div class="loading-spinner">Generating token...</div>';
@@ -251,7 +294,7 @@ async function generateToken() {
       employeeCode: currentUser.code,
       department: currentUser.department,
       token: tokenNumber,
-      date: today,
+      date: todayDate,
       generatedAt: new Date().toISOString()
     });
     showToken(tokenNumber, new Date().toISOString());
@@ -335,33 +378,26 @@ function handleAdminLogout() {
 // 🔥 ADMIN TABLE + PASSWORD RESET
 async function loadAdminTable() {
   const tableDiv = document.getElementById('adminTable');
-  const today = getTodayISO();
-
+  
   try {
-    // 1. Saare employees fetch karo
     const empSnap = await getDocs(collection(db, 'employees'));
     let employees = [];
     empSnap.forEach(doc => employees.push({ code: doc.id, ...doc.data() }));
     
-    // 2. Aaj ke tokens fetch karo
-    const tokenQ = query(collection(db, 'tokens'), where('date', '==', today));
+    const tokenQ = query(collection(db, 'tokens'), where('date', '==', todayDate));
     const tokenSnap = await getDocs(tokenQ);
     let tokens = [];
     tokenSnap.forEach(doc => tokens.push(doc.data()));
 
-    // Sort employees by Department then Code
     employees.sort((a, b) => {
       if (a.department === b.department) return a.code.localeCompare(b.code);
       return a.department.localeCompare(b.department);
     });
 
-    // 🔥 Yahan maine Today's Token me double quote use kiya hai taaki code na toote
     let html = '<table><thead><tr><th>Dept</th><th>Emp Code</th><th>Today Token</th><th>Action</th></tr></thead><tbody>';
-    
     employees.forEach(emp => {
       const tokenInfo = tokens.find(t => t.employeeCode === emp.code);
       const tokenStr = tokenInfo ? `<strong>${tokenInfo.token}</strong>` : '<span style="color:#ccc;">No Token</span>';
-      
       html += `<tr>
         <td>${emp.department}</td>
         <td>${emp.code}</td>
@@ -372,7 +408,7 @@ async function loadAdminTable() {
     html += '</tbody></table>';
     tableDiv.innerHTML = html;
     
-    window._tokens = tokens; // CSV download ke liye save karo
+    window._tokens = tokens; 
 
   } catch (err) {
     console.error(err);
@@ -380,37 +416,28 @@ async function loadAdminTable() {
   }
 }
 
-// 🔥 PASSWORD RESET FUNCTION
 window.resetPassword = async function(code) {
-  if (!confirm(`Kya aap ${code} ka password reset karna chahte hain? Agli baar login karte waqt wo naya password set karega.`)) return;
-
+  if (!confirm(`Kya aap ${code} ka password reset karna chahte hain?`)) return;
   try {
-    await setDoc(doc(db, 'employees', code), {
-      password: null // Reset to null
-    }, { merge: true });
-    
+    await setDoc(doc(db, 'employees', code), { password: null }, { merge: true });
     alert(`${code} ka password successfully reset ho gaya!`);
   } catch (err) {
     alert('Error resetting password: ' + err.message);
   }
 };
 
-// 🔥 DOWNLOAD CSV
 function downloadCSV() {
-  const today = getTodayISO();
   const tokens = window._tokens || [];
-
   let csv = 'Date,Department,Employee Code,Token,Time\n';
   tokens.forEach(t => {
     const time = new Date(t.generatedAt).toLocaleTimeString('en-IN');
     csv += `${t.date},${t.department},${t.employeeCode},${t.token},${time}\n`;
   });
-
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Cantabil_Tokens_${today}.csv`;
+  a.download = `Cantabil_Tokens_${todayDate}.csv`;
   a.click();
 }
 
