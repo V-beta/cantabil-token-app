@@ -18,7 +18,7 @@ const MENU_URL = 'https://raw.githubusercontent.com/V-beta/cantabil-cafeteria-me
 
 let currentUser = null;
 let currentMenu = null;
-let isTodayWeekOff = false; // 🔥 Naya variable
+let isTodayWeekOff = false;
 
 // 🔥 BUTTONS CONNECT
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,7 +96,6 @@ async function showDashboard() {
   document.getElementById('dashUserName').textContent = `Hello, ${currentUser.code} 👋`;
   document.getElementById('dashUserDept').textContent = `Department: ${currentUser.department}`;
   
-  // Pehle menu load hoga, phir check hoga ki week off hai ya nahi
   await loadMenu(); 
   await checkTokenStatus();
   await loadHistory();
@@ -128,20 +127,18 @@ async function loadMenu() {
     if (!todayMenu) {
       menuDiv.innerHTML = '<p style="text-align:center;color:#888;">No menu available for today.</p>';
       dateDiv.textContent = today;
-      isTodayWeekOff = true; // Agar menu nahi hai, toh token bhi nahi milega
+      isTodayWeekOff = true;
       return;
     }
 
     dateDiv.textContent = `${todayMenu.day}, ${today}`;
     
-    // 🔥 CHECK: Kya aaj Week Off hai?
     if (todayMenu.lunch && todayMenu.lunch.length === 1 && todayMenu.lunch[0].name === 'Week Off') {
        menuDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: #C9A961; font-size: 24px; font-weight: bold;">🌴 Week Off</div>';
-       isTodayWeekOff = true; // Set to true
+       isTodayWeekOff = true;
        return;
     }
 
-    // Agar normal din hai
     isTodayWeekOff = false; 
     let html = '<div class="dish-grid">';
     (todayMenu.lunch || []).forEach(d => {
@@ -162,7 +159,6 @@ async function checkTokenStatus() {
   const tokenDiv = document.getElementById('tokenContent');
   const today = getTodayISO();
 
-  // 🔥 AGAR WEEK OFF HAI TOH TOKEN KA OPTION MAT DIKHAO
   if (isTodayWeekOff) {
     tokenDiv.innerHTML = `
       <div class="token-empty">
@@ -285,6 +281,7 @@ function handleAdminLogout() {
   document.getElementById('loginPage').classList.add('active');
 }
 
+// 🔥 ADMIN TABLE (Department-wise Sorted)
 async function loadAdminTable() {
   const tableDiv = document.getElementById('adminTable');
   const today = getTodayISO();
@@ -300,12 +297,19 @@ async function loadAdminTable() {
 
     let tokens = [];
     snap.forEach(doc => tokens.push(doc.data()));
-    tokens.sort((a, b) => a.employeeCode.localeCompare(b.employeeCode));
+    
+    // 🔥 SORT: Pehle Department se, phir Employee Code se
+    tokens.sort((a, b) => {
+      if (a.department === b.department) {
+        return a.employeeCode.localeCompare(b.employeeCode);
+      }
+      return a.department.localeCompare(b.department);
+    });
 
-    let html = '<table><thead><tr><th>Emp Code</th><th>Department</th><th>Token</th><th>Time</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Department</th><th>Emp Code</th><th>Token</th><th>Time</th></tr></thead><tbody>';
     tokens.forEach(t => {
       const time = new Date(t.generatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-      html += `<tr><td>${t.employeeCode}</td><td>${t.department}</td><td><strong>${t.token}</strong></td><td>${time}</td></tr>`;
+      html += `<tr><td><strong>${t.department}</strong></td><td>${t.employeeCode}</td><td><strong>${t.token}</strong></td><td>${time}</td></tr>`;
     });
     html += '</tbody></table>';
     tableDiv.innerHTML = html;
@@ -314,24 +318,34 @@ async function loadAdminTable() {
   }
 }
 
-// ===== DOWNLOAD CSV =====
+// 🔥 DOWNLOAD CSV (Department-wise Sorted)
 async function downloadCSV() {
   const today = getTodayISO();
   const q = query(collection(db, 'tokens'), where('date', '==', today));
   const snap = await getDocs(q);
 
-  let csv = 'Date,Employee Code,Department,Token,Time\n';
-  snap.forEach(doc => {
-    const t = doc.data();
+  let tokens = [];
+  snap.forEach(doc => tokens.push(doc.data()));
+
+  // 🔥 SORT: Pehle Department se, phir Employee Code se
+  tokens.sort((a, b) => {
+    if (a.department === b.department) {
+      return a.employeeCode.localeCompare(b.employeeCode);
+    }
+    return a.department.localeCompare(b.department);
+  });
+
+  let csv = 'Date,Department,Employee Code,Token,Time\n';
+  tokens.forEach(t => {
     const time = new Date(t.generatedAt).toLocaleTimeString('en-IN');
-    csv += `${t.date},${t.employeeCode},${t.department},${t.token},${time}\n`;
+    csv += `${t.date},${t.department},${t.employeeCode},${t.token},${time}\n`;
   });
 
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `tokens_${today}.csv`;
+  a.download = `Cantabil_Tokens_${today}.csv`;
   a.click();
 }
 
