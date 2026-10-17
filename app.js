@@ -79,14 +79,12 @@ async function handleLogin() {
     // 🔥 Agar pehli baar login hai (password null hai) ya default password daala hai
     if (!empData.password || empData.password === code + 'CRIL' || empData.password === password) {
       
-      // Agar pehli baar hai, toh Password Setup dikhao
       if (!empData.password || empData.password === code + 'CRIL') {
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('setupForm').style.display = 'block';
         document.getElementById('setupCodeDisplay').textContent = code;
         document.getElementById('setupCodeHidden').value = code;
-        document.getElementById('setupForm').classList.add('active-setup');
-        return; // Yahan ruk jao, aage mat badho
+        return; // Stop here, wait for new password setup
       }
     }
 
@@ -122,12 +120,10 @@ async function saveNewPassword() {
   }
 
   try {
-    // Firebase me naya password save karo
     await setDoc(doc(db, 'employees', code), {
       password: newPass
     }, { merge: true });
 
-    // Auto-login after setup
     const empSnap = await getDoc(doc(db, 'employees', code));
     const empData = empSnap.data();
     
@@ -217,7 +213,7 @@ async function checkTokenStatus() {
   if (isTodayWeekOff) {
     tokenDiv.innerHTML = `
       <div class="token-empty">
-        <p style="color: #C9A961; font-weight: bold; font-size: 16px;">It's a Week Off today! No tokens required.</p>
+        <p style="color: #C9A961; font-weight: bold; font-size: 16px;">It is a Week Off today! No tokens required.</p>
       </div>
     `;
     return;
@@ -359,7 +355,8 @@ async function loadAdminTable() {
       return a.department.localeCompare(b.department);
     });
 
-    let html = '<table><thead><tr><th>Dept</th><th>Emp Code</th><th>Today\\'s Token</th><th>Action</th></tr></thead><tbody>';
+    // 🔥 Yahan maine Today's Token me double quote use kiya hai taaki code na toote
+    let html = '<table><thead><tr><th>Dept</th><th>Emp Code</th><th>Today Token</th><th>Action</th></tr></thead><tbody>';
     
     employees.forEach(emp => {
       const tokenInfo = tokens.find(t => t.employeeCode === emp.code);
