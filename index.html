@@ -4,7 +4,84 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cantabil Cafeteria</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Georgia', serif; }
+    body { background-color: #FAF8F5; color: #1A1A1A; min-height: 100vh; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* === LOGIN PAGE === */
+    #loginPage {
+      display: none; align-items: center; justify-content: center;
+      min-height: 100vh; background: linear-gradient(135deg, #1B2A4E 0%, #0d182e 100%); padding: 20px;
+    }
+    #loginPage.active { display: flex; }
+    .login-container {
+      background: white; width: 100%; max-width: 400px; border-radius: 8px;
+      padding: 40px 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border-top: 5px solid #C9A961;
+    }
+    .brand { text-align: center; margin-bottom: 30px; }
+    .brand-tagline { font-size: 10px; letter-spacing: 2px; color: #8A8A8A; margin-bottom: 5px; }
+    .brand-logo { font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #1B2A4E; border: 2px solid #C9A961; padding: 10px; margin-bottom: 10px; }
+    .brand h1 { font-size: 16px; color: #8A8A8A; font-weight: normal; font-style: italic; }
+    .login-form label { display: block; font-size: 12px; font-weight: bold; color: #1B2A4E; margin-bottom: 5px; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
+    .login-form input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; background: #FAF8F5; }
+    .login-form input:focus { outline: none; border-color: #C9A961; background: white; }
+    #loginBtn { width: 100%; padding: 14px; margin-top: 25px; background: #1B2A4E; color: #C9A961; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; }
+    #loginBtn:hover { background: #152040; }
+    .login-footer { text-align: center; margin-top: 20px; }
+    .login-footer a { color: #8A8A8A; font-size: 12px; text-decoration: none; }
+    .error-msg { color: #c62828; font-size: 13px; margin-top: 15px; text-align: center; display: none; font-weight: bold;}
+    .error-msg.show { display: block; }
+
+    /* === TOPBAR === */
+    .topbar { background: #1B2A4E; color: white; border-bottom: 3px solid #C9A961; }
+    .topbar-inner { max-width: 800px; margin: 0 auto; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .brand-logo-small { font-size: 18px; font-weight: bold; letter-spacing: 3px; color: #C9A961; }
+    .user-info { text-align: right; }
+    .user-name { font-weight: bold; font-size: 15px; }
+    .user-dept { font-size: 11px; color: #C9A961; font-style: italic; }
+    .logout-btn { background: transparent; color: #C9A961; border: 1px solid #C9A961; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .logout-btn:hover { background: #C9A961; color: #1B2A4E; }
+
+    /* === DASHBOARD === */
+    .dashboard-content { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #EDE4D3; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #C9A961; padding-bottom: 10px; margin-bottom: 15px; }
+    .card-header h2 { font-size: 16px; color: #1B2A4E; }
+    .menu-date { font-size: 13px; color: #8A8A8A; font-style: italic; }
+
+    /* === TOKEN === */
+    .token-card { text-align: center; }
+    .token-empty p { color: #8A8A8A; margin-bottom: 15px; }
+    .generate-btn { background: #C9A961; color: #1B2A4E; padding: 12px 24px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .generate-btn:hover { background: #b59654; }
+    .token-result { background: #1B2A4E; color: white; padding: 30px; border-radius: 8px; margin-top: 15px; border: 3px solid #C9A961; }
+    .token-number { font-size: 48px; font-weight: bold; letter-spacing: 10px; color: #C9A961; margin: 15px 0; font-family: monospace; }
+    .token-note { font-size: 12px; color: #ccc; }
+
+    /* === MODAL === */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; position: relative; border-top: 5px solid #C9A961; }
+    .close { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #888; }
+    .modal-content h2 { margin-bottom: 20px; color: #1B2A4E; }
+    .modal-content input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; }
+    .modal-content button { width: 100%; padding: 12px; background: #1B2A4E; color: #C9A961; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+    /* === TABLE === */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #FAF8F5; color: #1B2A4E; }
+    .download-btn { background: #1B2A4E; color: #C9A961; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+    /* === MENU DISH GRID === */
+    .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .dish-item { background: #FAF8F5; border: 1px solid #eee; border-radius: 4px; padding: 10px; text-align: center; }
+    .dish-img { width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 5px; }
+    .dish-name { font-size: 13px; font-weight: bold; color: #1B2A4E; }
+    .loading-spinner { text-align: center; color: #888; font-style: italic; padding: 20px; }
+  </style>
 </head>
 <body>
 
@@ -24,13 +101,13 @@
         <label>Password</label>
         <input type="password" id="loginPassword" placeholder="Enter password">
 
-        <button id="loginBtn" onclick="handleLogin()">LOGIN</button>
+        <button id="loginBtn">LOGIN</button>
 
         <div id="loginError" class="error-msg"></div>
       </div>
 
       <div class="login-footer">
-        <a href="#" onclick="showAdminLogin(event)">Admin Login</a>
+        <a href="#" id="adminLoginLink">Admin Login</a>
       </div>
     </div>
   </div>
@@ -41,15 +118,14 @@
       <div class="topbar-inner">
         <div class="brand-logo-small">CANTABIL</div>
         <div class="user-info">
-          <div class="user-name" id="dashUserName">Hello, HR01</div>
-          <div class="user-dept" id="dashUserDept">Department: HR</div>
+          <div class="user-name" id="dashUserName">Hello</div>
+          <div class="user-dept" id="dashUserDept">Department</div>
         </div>
-        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
       </div>
     </div>
 
     <div class="dashboard-content">
-      <!-- TODAY'S MENU -->
       <div class="card">
         <div class="card-header">
           <h2>🍽️ Today's Menu</h2>
@@ -60,20 +136,15 @@
         </div>
       </div>
 
-      <!-- TOKEN SECTION -->
       <div class="card token-card">
         <div class="card-header">
           <h2>🎫 Today's Token</h2>
         </div>
         <div id="tokenContent">
-          <div class="token-empty">
-            <p>You haven't generated your token for today yet.</p>
-            <button class="generate-btn" onclick="generateToken()">🍽️ Generate Today's Token</button>
-          </div>
+          <div class="loading-spinner">Checking token...</div>
         </div>
       </div>
 
-      <!-- HISTORY -->
       <div class="card">
         <div class="card-header">
           <h2>📊 My Token History</h2>
@@ -88,10 +159,10 @@
   <!-- ===== ADMIN LOGIN MODAL ===== -->
   <div id="adminLoginModal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeAdminLogin()">&times;</span>
+      <span class="close" id="closeModalBtn">&times;</span>
       <h2>Admin Login</h2>
       <input type="password" id="adminPasswordInput" placeholder="Enter admin password">
-      <button onclick="handleAdminLogin()">Login as Admin</button>
+      <button id="adminLoginBtn">Login as Admin</button>
       <div id="adminError" class="error-msg"></div>
     </div>
   </div>
@@ -101,7 +172,7 @@
     <div class="topbar admin-topbar">
       <div class="topbar-inner">
         <div class="brand-logo-small">CANTABIL ADMIN</div>
-        <button class="logout-btn" onclick="handleAdminLogout()">Logout</button>
+        <button class="logout-btn" id="adminLogoutBtn">Logout</button>
       </div>
     </div>
 
@@ -109,7 +180,7 @@
       <div class="card">
         <div class="card-header">
           <h2>📋 Today's Generated Tokens</h2>
-          <button class="download-btn" onclick="downloadCSV()">📥 Download CSV</button>
+          <button class="download-btn" id="downloadCsvBtn">📥 Download CSV</button>
         </div>
         <div id="adminTable">
           <div class="loading-spinner">Loading tokens...</div>
