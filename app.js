@@ -18,18 +18,16 @@ const MENU_URL = 'https://raw.githubusercontent.com/V-beta/cantabil-cafeteria-me
 
 let currentUser = null;
 let currentMenu = null;
+let isTodayWeekOff = false; // 🔥 Naya variable
 
-// 🔥 BUTTONS CONNECT KARO (Logout button bhi isme hai)
+// 🔥 BUTTONS CONNECT
 document.addEventListener('DOMContentLoaded', () => {
-  // Login Page Buttons
   const loginBtn = document.getElementById('loginBtn');
   if(loginBtn) loginBtn.addEventListener('click', handleLogin);
   
-  // Dashboard Logout Button
   const logoutBtn = document.getElementById('logoutBtn');
   if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-  // Admin Buttons
   const adminLoginLink = document.getElementById('adminLoginLink');
   if(adminLoginLink) adminLoginLink.addEventListener('click', showAdminLogin);
 
@@ -45,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const downloadCsvBtn = document.getElementById('downloadCsvBtn');
   if(downloadCsvBtn) downloadCsvBtn.addEventListener('click', downloadCSV);
 
-  // Auto Login Check
   const saved = localStorage.getItem('cafeteriaUser');
   if (saved) {
     currentUser = JSON.parse(saved);
@@ -99,7 +96,8 @@ async function showDashboard() {
   document.getElementById('dashUserName').textContent = `Hello, ${currentUser.code} 👋`;
   document.getElementById('dashUserDept').textContent = `Department: ${currentUser.department}`;
   
-  await loadMenu();
+  // Pehle menu load hoga, phir check hoga ki week off hai ya nahi
+  await loadMenu(); 
   await checkTokenStatus();
   await loadHistory();
 }
@@ -107,12 +105,8 @@ async function showDashboard() {
 function handleLogout() {
   localStorage.removeItem('cafeteriaUser');
   currentUser = null;
-  
-  // Hide Dashboard, Show Login
   document.getElementById('dashboardPage').classList.remove('active');
   document.getElementById('loginPage').classList.add('active');
-  
-  // Clear inputs
   document.getElementById('loginCode').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('loginError').classList.remove('show');
@@ -134,17 +128,21 @@ async function loadMenu() {
     if (!todayMenu) {
       menuDiv.innerHTML = '<p style="text-align:center;color:#888;">No menu available for today.</p>';
       dateDiv.textContent = today;
+      isTodayWeekOff = true; // Agar menu nahi hai, toh token bhi nahi milega
       return;
     }
 
     dateDiv.textContent = `${todayMenu.day}, ${today}`;
     
-    // Check if it's week off
+    // 🔥 CHECK: Kya aaj Week Off hai?
     if (todayMenu.lunch && todayMenu.lunch.length === 1 && todayMenu.lunch[0].name === 'Week Off') {
        menuDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: #C9A961; font-size: 24px; font-weight: bold;">🌴 Week Off</div>';
+       isTodayWeekOff = true; // Set to true
        return;
     }
 
+    // Agar normal din hai
+    isTodayWeekOff = false; 
     let html = '<div class="dish-grid">';
     (todayMenu.lunch || []).forEach(d => {
       html += `<div class="dish-item">
@@ -164,6 +162,16 @@ async function checkTokenStatus() {
   const tokenDiv = document.getElementById('tokenContent');
   const today = getTodayISO();
 
+  // 🔥 AGAR WEEK OFF HAI TOH TOKEN KA OPTION MAT DIKHAO
+  if (isTodayWeekOff) {
+    tokenDiv.innerHTML = `
+      <div class="token-empty">
+        <p style="color: #C9A961; font-weight: bold; font-size: 16px;">It's a Week Off today! No tokens required.</p>
+      </div>
+    `;
+    return;
+  }
+
   try {
     const q = query(collection(db, 'tokens'), where('employeeCode', '==', currentUser.code), where('date', '==', today));
     const querySnapshot = await getDocs(q);
@@ -178,7 +186,6 @@ async function checkTokenStatus() {
           <button class="generate-btn" id="generateBtn">🍽️ Generate Today's Token</button>
         </div>
       `;
-      // Attach event listener to newly created button
       document.getElementById('generateBtn').addEventListener('click', generateToken);
     }
   } catch (err) {
