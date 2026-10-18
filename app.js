@@ -14,7 +14,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const ADMIN_PASSWORD = "Cantabil@Admin2026";
-const MENU_URL = 'https://raw.githubusercontent.com/V-beta/cantabil-cafeteria-menu/refs/heads/main/menu.json';
+const GITHUB_MENU_URL = 'https://raw.githubusercontent.com/V-beta/cantabil-cafeteria-menu/refs/heads/main/menu.json';
 
 let currentUser = null;
 let fullMenuData = [];
@@ -47,13 +47,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const setupPasswordBtn = document.getElementById('setupPasswordBtn');
   if(setupPasswordBtn) setupPasswordBtn.addEventListener('click', saveNewPassword);
 
-  // 🔥 Date Nav Buttons
+  // Date Nav Buttons
   document.getElementById('prevDayBtn').addEventListener('click', () => shiftDate(-1));
   document.getElementById('nextDayBtn').addEventListener('click', () => shiftDate(1));
   document.getElementById('goTodayBtn').addEventListener('click', () => {
     selectedDate = todayDate;
     updateMenuDisplay();
   });
+
+  // Admin Menu Update Buttons
+  const admAddLunchBtn = document.getElementById('admAddLunchBtn');
+  if(admAddLunchBtn) admAddLunchBtn.addEventListener('click', () => addAdminDishRow('lunch'));
+  
+  const admSaveMenuBtn = document.getElementById('admSaveMenuBtn');
+  if(admSaveMenuBtn) admSaveMenuBtn.addEventListener('click', saveMenuToFirebase);
 
   const saved = localStorage.getItem('cafeteriaUser');
   if (saved) {
@@ -156,11 +163,7 @@ async function showDashboard() {
   todayDate = getTodayISO();
   selectedDate = todayDate;
 
-  // Menu load karo pehle
   await fetchMenuData(); 
-  
-  // Fir token aur history check karo
-  await checkTodayToken();
   await loadHistory();
 }
 
@@ -174,14 +177,32 @@ function handleLogout() {
   document.getElementById('loginError').classList.remove('show');
 }
 
-// ===== FETCH FULL MENU =====
+// ===== FETCH FULL MENU (GitHub + Firebase Merge) =====
 async function fetchMenuData() {
   try {
-    const res = await fetch(MENU_URL + '?t=' + Date.now());
-    const data = await res.json();
-    fullMenuData = data.menu;
+    let menuArr = [];
     
-    // Data aane ke baad UI update karo
+    // 1. Fetch from GitHub
+    const res = await fetch(GITHUB_MENU_URL + '?t=' + Date.now());
+    const data = await res.json();
+    if(data && data.menu) menuArr = data.menu;
+
+    // 2. Fetch from Firebase (Admin updated menus)
+    const menuSnap = await getDocs(collection(db, 'menus'));
+    menuSnap.forEach(docSnap => {
+      const fbMenu = docSnap.data();
+      const existingIdx = menuArr.findIndex(m => m.date === fbMenu.date);
+      if(existingIdx >= 0) {
+        menuArr[existingIdx] = fbMenu; // Firebase overrides GitHub
+      } else {
+        menuArr.push(fbMenu);
+      }
+    });
+
+    // Sort by date
+    menuArr.sort((a, b) => a.date.localeCompare(b.date));
+    fullMenuData = menuArr;
+    
     updateMenuDisplay(); 
   } catch (err) {
     document.getElementById('menuContent').innerHTML = '<p style="color:red;">Failed to load menu. Please refresh.</p>';
@@ -208,7 +229,6 @@ function updateMenuDisplay() {
   const dateTitle = document.getElementById('menuDateDisplay');
   const tokenCard = document.getElementById('tokenCard');
 
-  // Date format karo
   const d = new Date(selectedDate);
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -216,47 +236,41 @@ function updateMenuDisplay() {
   
   dateTitle.textContent = dateStr;
 
-  // Today Button check
   if (selectedDate !== todayDate) {
     document.getElementById('goTodayBtn').style.display = 'block';
   } else {
     document.getElementById('goTodayBtn').style.display = 'none';
   }
 
-  // 🔥 TOKEN CARD SHOW/HIDE LOGIC
-  // Agar aaj ki date hai, tabhi token card dikhao
+  // TOKEN CARD SHOW/HIDE
   if (selectedDate === todayDate) {
     tokenCard.style.display = 'block';
   } else {
-    tokenCard.style.display = 'none'; // Purani ya aage ki date pe token hide
+    tokenCard.style.display = 'none'; 
   }
 
-  // Menu find karo
   const selectedMenu = fullMenuData.find(m => m.date === selectedDate);
 
+  // 🔥 BUG FIX: Agar Week Off hai ya menu nahi hai, toh Token turant hide karo
   if (!selectedMenu) {
     menuDiv.innerHTML = '<p style="text-align:center;color:#888; padding:20px;">No menu available for this date.</p>';
+    if (selectedDate === todayDate) {
+      tokenCard.style.display = 'none';
+    }
     return;
   }
 
-  // Week Off check
   const isWeekOff = selectedMenu.lunch && selectedMenu.lunch.length === 1 && selectedMenu.lunch[0].name === 'Week Off';
   
   if (isWeekOff) {
      menuDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: #C9A961; font-size: 24px; font-weight: bold;">🌴 Week Off</div>';
-     
-     // 🔥 AGAR AAJ WEEK OFF HAI TOH TOKEN GENERATE HATA DO
      if (selectedDate === todayDate) {
-        document.getElementById('tokenContent').innerHTML = `
-          <div class="token-empty">
-            <p style="color: #C9A961; font-weight: bold; font-size: 16px;">It is a Week Off today! No tokens required.</p>
-          </div>
-        `;
+       tokenCard.style.display = 'none'; // 🔥 Sunday ka token bug fix
      }
      return;
   }
 
-  // Normal Menu Show karo
+  // Normal Menu
   let html = '<div class="dish-grid">';
   (selectedMenu.lunch || []).forEach(dish => {
     html += `<div class="dish-item">
@@ -266,6 +280,11 @@ function updateMenuDisplay() {
   });
   html += '</div>';
   menuDiv.innerHTML = html;
+
+  // Agar normal din hai aur date aaj ki hai, tabhi token check karo
+  if (selectedDate === todayDate) {
+    checkTodayToken();
+  }
 }
 
 // ===== CHECK TODAY'S TOKEN =====
@@ -280,21 +299,13 @@ async function checkTodayToken() {
       const tokenData = querySnapshot.docs[0].data();
       showToken(tokenData.token, tokenData.generatedAt);
     } else {
-      // Agar Week off nahi hai toh button dikhao
-      const todayMenu = fullMenuData.find(m => m.date === todayDate);
-      const isWeekOff = todayMenu && todayMenu.lunch && todayMenu.lunch.length === 1 && todayMenu.lunch[0].name === 'Week Off';
-      
-      if (isWeekOff) {
-         tokenDiv.innerHTML = `<div class="token-empty"><p style="color: #C9A961; font-weight: bold;">It is a Week Off today! No tokens required.</p></div>`;
-      } else {
-         tokenDiv.innerHTML = `
-          <div class="token-empty">
-            <p>You haven't generated your token for today yet.</p>
-            <button class="generate-btn" id="generateBtn">🍽️ Generate Today's Token</button>
-          </div>
-        `;
-        document.getElementById('generateBtn').addEventListener('click', generateToken);
-      }
+      tokenDiv.innerHTML = `
+        <div class="token-empty">
+          <p>You haven't generated your token for today yet.</p>
+          <button class="generate-btn" id="generateBtn">🍽️ Generate Today's Token</button>
+        </div>
+      `;
+      document.getElementById('generateBtn').addEventListener('click', generateToken);
     }
   } catch (err) {
     console.error(err);
@@ -361,7 +372,7 @@ async function loadHistory() {
   }
 }
 
-// ===== ADMIN (No changes needed) =====
+// ===== ADMIN =====
 function showAdminLogin(e) {
   e.preventDefault();
   document.getElementById('adminLoginModal').classList.add('show');
@@ -381,89 +392,11 @@ function handleAdminLogin() {
     document.getElementById('loginPage').classList.remove('active');
     document.getElementById('dashboardPage').classList.remove('active');
     document.getElementById('adminPage').classList.add('active');
+    
+    // Set default date to today in admin form
+    document.getElementById('admDate').value = todayDate;
+    addAdminDishRow('lunch'); // Ek khaali row add karo
+
     loadAdminTable();
   } else {
-    showError(err, 'Incorrect admin password');
-  }
-}
-
-function handleAdminLogout() {
-  document.getElementById('adminPage').classList.remove('active');
-  document.getElementById('loginPage').classList.add('active');
-}
-
-async function loadAdminTable() {
-  const tableDiv = document.getElementById('adminTable');
-  
-  try {
-    const empSnap = await getDocs(collection(db, 'employees'));
-    let employees = [];
-    empSnap.forEach(doc => employees.push({ code: doc.id, ...doc.data() }));
-    
-    const tokenQ = query(collection(db, 'tokens'), where('date', '==', todayDate));
-    const tokenSnap = await getDocs(tokenQ);
-    let tokens = [];
-    tokenSnap.forEach(doc => tokens.push(doc.data()));
-
-    employees.sort((a, b) => {
-      if (a.department === b.department) return a.code.localeCompare(b.code);
-      return a.department.localeCompare(b.department);
-    });
-
-    let html = '<table><thead><tr><th>Dept</th><th>Emp Code</th><th>Today Token</th><th>Action</th></tr></thead><tbody>';
-    employees.forEach(emp => {
-      const tokenInfo = tokens.find(t => t.employeeCode === emp.code);
-      const tokenStr = tokenInfo ? `<strong>${tokenInfo.token}</strong>` : '<span style="color:#ccc;">No Token</span>';
-      html += `<tr>
-        <td>${emp.department}</td>
-        <td>${emp.code}</td>
-        <td>${tokenStr}</td>
-        <td><button class="btn-small danger" onclick="resetPassword('${emp.code}')">Reset Pass</button></td>
-      </tr>`;
-    });
-    html += '</tbody></table>';
-    tableDiv.innerHTML = html;
-    
-    window._tokens = tokens; 
-
-  } catch (err) {
-    console.error(err);
-    tableDiv.innerHTML = '<p style="color:red;">Failed to load data.</p>';
-  }
-}
-
-window.resetPassword = async function(code) {
-  if (!confirm(`Kya aap ${code} ka password reset karna chahte hain?`)) return;
-  try {
-    await setDoc(doc(db, 'employees', code), { password: null }, { merge: true });
-    alert(`${code} ka password successfully reset ho gaya!`);
-  } catch (err) {
-    alert('Error resetting password: ' + err.message);
-  }
-};
-
-function downloadCSV() {
-  const tokens = window._tokens || [];
-  let csv = 'Date,Department,Employee Code,Token,Time\n';
-  tokens.forEach(t => {
-    const time = new Date(t.generatedAt).toLocaleTimeString('en-IN');
-    csv += `${t.date},${t.department},${t.employeeCode},${t.token},${time}\n`;
-  });
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Cantabil_Tokens_${todayDate}.csv`;
-  a.click();
-}
-
-// ===== HELPERS =====
-function getTodayISO() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-
-function showError(el, msg) {
-  el.textContent = msg;
-  el.classList.add('show');
-}
+    showError(err, 'Incorrect admin password
