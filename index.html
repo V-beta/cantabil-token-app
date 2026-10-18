@@ -70,6 +70,8 @@
     .modal-content h2 { margin-bottom: 20px; color: #1B2A4E; }
     .modal-content input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; }
     .modal-content button { width: 100%; padding: 12px; background: #1B2A4E; color: #C9A961; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    
+    /* Tables */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
     th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #FAF8F5; color: #1B2A4E; }
@@ -77,18 +79,21 @@
     .btn-small { padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: none; font-weight: bold;}
     .btn-small.danger { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;}
 
-    /* === MENU DISH GRID (FIXED IMAGE SIZE) === */
+    /* === MENU DISH GRID === */
     .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .dish-item { background: #FAF8F5; border: 1px solid #EDE4D3; border-radius: 6px; overflow: hidden; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-    .dish-img { 
-      width: 100%; 
-      aspect-ratio: 1 / 1; /* 🔥 Ye image ko perfect square banata hai */
-      object-fit: cover; 
-      display: block;
-      background: #eee;
-    }
+    .dish-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; background: #eee; }
     .dish-name { font-size: 13px; font-weight: bold; color: #1B2A4E; padding: 10px 5px; border-top: 2px solid #C9A961; background: white;}
     .loading-spinner { text-align: center; color: #888; font-style: italic; padding: 20px; }
+
+    /* 🔥 ADMIN MENU UPDATER FORM */
+    .admin-form { background: #FAF8F5; padding: 15px; border-radius: 6px; border: 1px solid #EDE4D3; margin-bottom: 20px; }
+    .admin-form label { font-size: 12px; font-weight: bold; color: #1B2A4E; display: block; margin-bottom: 5px; margin-top: 10px; }
+    .admin-form input, .admin-form select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; }
+    .admin-form .dish-row { display: grid; grid-template-columns: 1fr 1fr 30px; gap: 8px; margin-bottom: 8px; }
+    .admin-form .btn-remove { background: #ffebee; color: #c62828; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    .btn-add { background: white; color: #1B2A4E; border: 1px dashed #C9A961; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 5px; font-weight: bold; }
+    .btn-save-menu { background: #C9A961; color: #1B2A4E; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; margin-top: 15px; cursor: pointer; font-size: 16px;}
   </style>
 </head>
 <body>
@@ -142,42 +147,25 @@
     </div>
 
     <div class="dashboard-content">
-      <!-- TODAY'S MENU WITH NAVIGATION -->
       <div class="card">
-        <div class="card-header">
-          <h2>🍽️ Menu</h2>
-        </div>
-        
-        <!-- DATE NAV BAR -->
+        <div class="card-header"><h2>🍽️ Menu</h2></div>
         <div class="date-nav">
           <button id="prevDayBtn">‹</button>
           <div class="date-title" id="menuDateDisplay">Loading...</div>
           <button id="nextDayBtn">›</button>
           <button id="goTodayBtn" class="today-btn" style="display:none;">Today</button>
         </div>
-
-        <div id="menuContent">
-          <div class="loading-spinner">Loading menu...</div>
-        </div>
+        <div id="menuContent"><div class="loading-spinner">Loading menu...</div></div>
       </div>
 
-      <!-- TOKEN (Only for Today) -->
       <div class="card token-card" id="tokenCard">
-        <div class="card-header">
-          <h2>🎫 Today's Token</h2>
-        </div>
-        <div id="tokenContent">
-          <div class="loading-spinner">Checking token...</div>
-        </div>
+        <div class="card-header"><h2>🎫 Today's Token</h2></div>
+        <div id="tokenContent"><div class="loading-spinner">Checking token...</div></div>
       </div>
 
       <div class="card">
-        <div class="card-header">
-          <h2>📊 My Token History</h2>
-        </div>
-        <div id="historyContent">
-          <div class="loading-spinner">Loading history...</div>
-        </div>
+        <div class="card-header"><h2>📊 My Token History</h2></div>
+        <div id="historyContent"><div class="loading-spinner">Loading history...</div></div>
       </div>
     </div>
   </div>
@@ -203,15 +191,31 @@
     </div>
 
     <div class="dashboard-content">
+      
+      <!-- 🔥 MENU UPDATER FORM -->
+      <div class="card">
+        <div class="card-header"><h2>✏️ Update Menu (Firebase)</h2></div>
+        <div class="admin-form">
+          <label>Date</label>
+          <input type="date" id="admDate">
+          
+          <label>Lunch Items</label>
+          <div id="admLunchList"></div>
+          <button class="btn-add" id="admAddLunchBtn">+ Add Lunch Dish</button>
+          
+          <button class="btn-save-menu" id="admSaveMenuBtn">💾 Save Menu to Database</button>
+        </div>
+      </div>
+
+      <!-- TOKENS TABLE -->
       <div class="card">
         <div class="card-header">
           <h2>📋 Employee Tokens & Password Reset</h2>
           <button class="download-btn" id="downloadCsvBtn">📥 Download CSV</button>
         </div>
-        <div id="adminTable">
-          <div class="loading-spinner">Loading data...</div>
-        </div>
+        <div id="adminTable"><div class="loading-spinner">Loading data...</div></div>
       </div>
+
     </div>
   </div>
 
